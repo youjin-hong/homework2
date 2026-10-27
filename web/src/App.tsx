@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import Kitchen from './Kitchen'
+import { chefName } from './names'
 import type { Job } from './types'
 
 type JobEvent = {
@@ -116,7 +117,7 @@ export default function App() {
               <td>{job.id}</td>
               <td>{job.menu}</td>
               <td className={`status-${job.status}`}>{job.status}</td>
-              <td>{job.workerId ?? '-'}</td>
+              <td>{chefName(job.workerId) ?? '-'}</td>
               <td>{job.message ?? '-'}</td>
               <td>{timeOf(job.createdAt)}</td>
             </tr>
@@ -130,7 +131,7 @@ export default function App() {
           <ul>
             {events.map((e, i) => (
               <li key={i}>
-                {timeOf(e.createdAt)} {e.event} {e.workerId ?? ''}
+                {timeOf(e.createdAt)} {e.event} {chefName(e.workerId) ?? ''}
               </li>
             ))}
           </ul>

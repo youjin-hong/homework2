@@ -179,3 +179,15 @@ tr.selected {
     grid-template-columns: 1fr;
   }
 }
+
+.manager {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  font-size: 14px;
+}
+
+.manager-face {
+  font-size: 24px;
+}

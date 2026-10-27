@@ -1,12 +1,6 @@
 import { LayoutGroup, motion } from 'motion/react'
+import { CHEFS, MANAGER } from './names'
 import type { Job } from './types'
-
-// 요리사 이름은 화면에서만 매핑한다
-const CHEFS = [
-  { workerId: 'worker-1', name: '요리사1', face: '👨‍🍳' },
-  { workerId: 'worker-2', name: '요리사2', face: '🧑‍🍳' },
-  { workerId: 'worker-3', name: '요리사3', face: '👩‍🍳' },
-]
 
 const MENU_ICON: Record<string, string> = { 라면: '🍜', 돈까스: '🥩', 김치볶음밥: '🍛' }
 
@@ -27,6 +21,12 @@ export default function Kitchen({ jobs }: { jobs: Job[] }) {
 
   return (
     <LayoutGroup>
+      <div className="manager">
+        <span className="manager-face">{MANAGER.face}</span>
+        <span>
+          <strong>{MANAGER.name}</strong> ({MANAGER.role}) 주문을 받아 꽂이에 꽂는 중
+        </span>
+      </div>
       <section className="kitchen">
         <div className="zone">
           <h3>주문 꽂이</h3>
