@@ -29,13 +29,15 @@ Docker 없이 맥북에서 마스터 1개와 워커 3개를 독립 프로세스�
 
 메뉴는 코드에 고정했다. 라면 3초 · 돈까스 5초 · 김치볶음밥 10초.
 
+화면에는 기본 현황표 위에 **게임식 주방 화면**(`web/src/Kitchen.tsx`)이 있다. 상태가 곧 위치라서 `queued`는 주문 꽂이, `started`는 해당 요리사 옆, `completed`/`failed`는 완성 카운터에 놓이고 Motion의 `layoutId`로 칸 사이를 이동한다. 이름은 화면에서만 붙였다(`web/src/names.ts`). 마스터는 은지원(홀 매니저), `worker-1`·`worker-2`·`worker-3`은 강호동·이수근·안재현이고, 코드와 `WORKER_ID`는 그대로다.
+
 | 프로세스 | 하는 일 |
 | --- | --- |
 | `server/master.js` | API, 결과 큐 소비, DB 기록. DB는 마스터만 쓴다 |
 | `server/worker.js` | 작업 큐 소비, 한 번에 한 건 조리, 이벤트 발행 (HTTP 서버 아님) |
 | `server/shared.js` | 큐 이름, 큐 옵션, 이벤트 이름, 메뉴, confirm 발행 헬퍼 |
 | `server/schema.sql` | MySQL 테이블 2개 (`jobs`, `job_events`) |
-| `web/` | Vite + React 현황표 |
+| `web/` | Vite + React 현황표와 주방 화면 (Motion) |
 | `nginx/homework2.conf` | 화면 제공, `/api/`를 마스터로 전달 |
 
 ## 설치 (맥북, Apple Silicon 기준)
