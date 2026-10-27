@@ -1,0 +1,96 @@
+body {
+  margin: 0;
+  font-family: -apple-system, 'Apple SD Gothic Neo', sans-serif;
+  background: #fffaf0;
+  color: #333;
+}
+
+main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+h1 {
+  margin: 0 0 16px;
+}
+
+.orders {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.orders button {
+  padding: 10px 16px;
+  font-size: 15px;
+  border: 0;
+  border-radius: 8px;
+  background: #e8590c;
+  color: #fff;
+  cursor: pointer;
+}
+
+.orders button:hover {
+  background: #d9480f;
+}
+
+.notice {
+  margin: 12px 0 0;
+  color: #c92a2a;
+}
+
+table {
+  width: 100%;
+  margin-top: 20px;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+th,
+td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+}
+
+tbody tr {
+  cursor: pointer;
+}
+
+tbody tr:hover,
+tr.selected {
+  background: #fff4e6;
+}
+
+.status-queued {
+  color: #868e96;
+}
+
+.status-started {
+  color: #e8590c;
+  font-weight: 600;
+}
+
+.status-completed {
+  color: #2f9e44;
+}
+
+.status-failed {
+  color: #c92a2a;
+}
+
+.log {
+  margin-top: 20px;
+}
+
+.log li {
+  font-family: ui-monospace, monospace;
+  font-size: 14px;
+  list-style: none;
+}
+
+.log ul {
+  padding: 0;
+}

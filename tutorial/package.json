@@ -1,0 +1,1 @@
+{"name":"tutorial","private":true,"type":"module","dependencies":{"amqplib":"^2.2.0"}}
