@@ -15,15 +15,23 @@ export const EVENTS = {
 };
 
 export const MENUS = {
-  라면: 3000,
-  돈까스: 5000,
-  김치볶음밥: 10000,
+  라면: 6000,
+  돈까스: 10000,
+  김치볶음밥: 15000,
 };
 
+export const WORKER_IDS = ['worker-1', 'worker-2', 'worker-3'];
+
+// 화면의 쓰러지기 버튼이 보내는 명령 큐 (워커마다 하나)
+export const controlQueue = (workerId) => `worker.control.${workerId}`;
+
+// 쓰러진 워커가 다시 일어나기까지의 시간
+export const WORKER_RECOVER_MS = 10000;
+
 // confirm 채널에서 브로커가 받았다는 확인까지 기다린다
-export function publishConfirmed(channel, queue, payload) {
+export function publishConfirmed(channel, queue, payload, options = {}) {
   return new Promise((resolve, reject) => {
-    channel.sendToQueue(queue, Buffer.from(JSON.stringify(payload)), { persistent: true }, (err) =>
+    channel.sendToQueue(queue, Buffer.from(JSON.stringify(payload)), { persistent: true, ...options }, (err) =>
       err ? reject(err) : resolve(),
     );
   });

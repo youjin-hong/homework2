@@ -27,9 +27,9 @@ Docker 없이 맥북에서 마스터 1개와 워커 3개를 독립 프로세스�
 | 가게 문을 닫았다 열어도 꽂이의 주문표는 그대로 | durable 큐 + persistent 메시지 |
 | 주문 현황판 | React 화면 (1초 Polling) |
 
-메뉴는 코드에 고정했다. 라면 3초 · 돈까스 5초 · 김치볶음밥 10초.
+메뉴는 코드에 고정했다. 라면 6초 · 돈까스 10초 · 김치볶음밥 15초. (처음에는 3초·5초·10초였고, 화면에서 흐름이 보이도록 늘렸다. 아래 테스트 결과는 처음 시간으로 측정했다.)
 
-화면에는 기본 현황표 위에 **게임식 주방 화면**(`web/src/Kitchen.tsx`)이 있다. 상태가 곧 위치라서 `queued`는 주문 꽂이, `started`는 해당 요리사 옆, `completed`/`failed`는 완성 카운터에 놓이고 Motion의 `layoutId`로 칸 사이를 이동한다. 이름은 화면에서만 붙였다(`web/src/names.ts`). 마스터는 은지원(홀 매니저), `worker-1`·`worker-2`·`worker-3`은 강호동·이수근·안재현이고, 코드와 `WORKER_ID`는 그대로다.
+화면에는 기본 현황표 위에 **게임식 주방 화면**(`web/src/Kitchen.tsx`)이 있다. 상태가 곧 위치라서 `queued`는 주문 꽂이, `started`는 해당 요리사 옆, `completed`/`failed`는 완성 카운터에 놓이고 Motion의 `layoutId`로 칸 사이를 이동한다. 요리사 옆의 **쓰러지기** 버튼은 테스트 E(수동 Ack)를 화면에서 해 보는 버튼이다. 누르면 마스터가 `worker.control.<workerId>` 큐에 명령을 보내고, 워커가 Ack 없이 연결을 끊어 조리 중이던 주문이 다른 요리사에게 `redelivered`로 넘어간다. 쓰러진 워커는 10초 뒤 스스로 돌아온다(쓰러짐 표시는 화면에서만 계산한다). 이름은 화면에서만 붙였다(`web/src/names.ts`). 마스터는 은지원(홀 매니저), `worker-1`·`worker-2`·`worker-3`은 강호동·이수근·안재현이고, 코드와 `WORKER_ID`는 그대로다.
 
 | 프로세스 | 하는 일 |
 | --- | --- |
@@ -92,11 +92,11 @@ RabbitMQ 관리 화면은 http://localhost:15672 (guest / guest)이다. 마스�
 
 ```json
 // jobs 큐
-{ "jobId": 15, "menu": "돈까스", "durationMs": 5000, "shouldFail": false }
+{ "jobId": 15, "menu": "돈까스", "durationMs": 10000, "shouldFail": false }
 
 // job.events 큐 (event = job.started / job.completed / job.failed)
 { "event": "job.completed", "jobId": 15, "status": "completed",
-  "workerId": "worker-2", "message": "조리 완료 (5.0초)", "occurredAt": "..." }
+  "workerId": "worker-2", "message": "조리 완료 (10.0초)", "occurredAt": "..." }
 ```
 
 - `POST /api/jobs`는 DB에 `queued`로 저장한 뒤 confirm 채널로 `jobs` 큐에 발행하고, 확인되면 `{ jobId, status: "queued" }`로 응답한다. 발행에 실패하면 해당 주문을 `failed`로 바꾸고 503을 돌려주도록 했다.

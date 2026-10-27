@@ -169,25 +169,104 @@ tr.selected {
   font-size: 13px;
 }
 
+.fall-btn {
+  padding: 3px 8px;
+  font-size: 12px;
+  border: 1px solid #ffc9c9;
+  border-radius: 6px;
+  background: #fff5f5;
+  color: #c92a2a;
+  cursor: pointer;
+}
+
+.fall-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .idle {
   color: #adb5bd;
   font-size: 13px;
 }
 
 @media (max-width: 640px) {
-  .kitchen {
+  .kitchen,
+  .front {
     grid-template-columns: 1fr;
   }
+}
+
+.front {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.front .zone {
+  min-height: 0;
 }
 
 .manager {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 20px;
-  font-size: 14px;
+  height: 48px;
 }
 
 .manager-face {
-  font-size: 24px;
+  font-size: 28px;
+}
+
+.manager-name {
+  width: 52px;
+  font-size: 13px;
+}
+
+.receive {
+  margin-left: 6px;
+  font-size: 13px;
+  color: #e8590c;
+}
+
+.zone h3 small {
+  margin-left: 4px;
+  font-weight: 400;
+  font-size: 12px;
+  color: #adb5bd;
+}
+
+.legend {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #f1e3c8;
+}
+
+.legend h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: #868e96;
+}
+
+.legend dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.legend dl div {
+  display: contents;
+}
+
+.legend dt {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.legend dd {
+  margin: 0;
 }

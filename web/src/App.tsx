@@ -20,6 +20,8 @@ export default function App() {
   const [notice, setNotice] = useState('')
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [events, setEvents] = useState<JobEvent[]>([])
+  const [receivingId, setReceivingId] = useState<number | null>(null)
+  const [fallen, setFallen] = useState<Record<string, boolean>>({})
 
   const loadJobs = useCallback(async () => {
     try {
@@ -67,9 +69,26 @@ export default function App() {
         )
         return
       }
+      const { jobId } = await res.json()
+      setReceivingId(jobId)
       await loadJobs()
+      // 홀 매니저가 접수하는 장면을 잠깐 보여 준 뒤 꽂이로 보낸다
+      setTimeout(() => setReceivingId((current) => (current === jobId ? null : current)), 2500)
     } catch {
       setNotice('지금은 주문을 받을 수 없습니다')
+    }
+  }
+
+  async function crash(workerId: string) {
+    setNotice('')
+    try {
+      const res = await fetch(`/api/workers/${workerId}/crash`, { method: 'POST' })
+      if (!res.ok) throw new Error()
+      const { recoverMs } = await res.json()
+      setFallen((prev) => ({ ...prev, [workerId]: true }))
+      setTimeout(() => setFallen((prev) => ({ ...prev, [workerId]: false })), recoverMs)
+    } catch {
+      setNotice('요리사를 쓰러뜨리지 못했습니다')
     }
   }
 
@@ -77,24 +96,31 @@ export default function App() {
     <main>
       <h1>강식당 주문 현황</h1>
 
-      <div className="orders">
-        {MENUS.map((menu) => (
-          <button key={menu} onClick={() => order(menu)}>
-            {menu} 주문
-          </button>
-        ))}
-        <label>
-          <input
-            type="checkbox"
-            checked={shouldFail}
-            onChange={(e) => setShouldFail(e.target.checked)}
-          />{' '}
-          재료 소진(실패시키기)
-        </label>
-      </div>
       {notice && <p className="notice">{notice}</p>}
 
-      <Kitchen jobs={jobs} />
+      <Kitchen
+        jobs={jobs}
+        receivingId={receivingId}
+        fallen={fallen}
+        onCrash={crash}
+        orderPanel={
+          <div className="orders">
+            {MENUS.map((menu) => (
+              <button key={menu} onClick={() => order(menu)}>
+                {menu} 주문
+              </button>
+            ))}
+            <label>
+              <input
+                type="checkbox"
+                checked={shouldFail}
+                onChange={(e) => setShouldFail(e.target.checked)}
+              />{' '}
+              재료 소진(실패시키기)
+            </label>
+          </div>
+        }
+      />
 
       <table>
         <thead>

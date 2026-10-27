@@ -1,7 +1,9 @@
 import amqp from 'amqplib';
 import express from 'express';
 import mysql from 'mysql2/promise';
-import { AMQP_URL, QUEUES, QUEUE_OPTIONS, EVENTS, MENUS, publishConfirmed } from './shared.js';
+import {
+  AMQP_URL, QUEUES, QUEUE_OPTIONS, MENUS, WORKER_IDS, WORKER_RECOVER_MS, controlQueue, publishConfirmed,
+} from './shared.js';
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
@@ -21,6 +23,7 @@ const pubCh = await conn.createConfirmChannel();
 const subCh = await conn.createChannel();
 await pubCh.assertQueue(QUEUES.JOBS, QUEUE_OPTIONS);
 await subCh.assertQueue(QUEUES.EVENTS, QUEUE_OPTIONS);
+for (const id of WORKER_IDS) await pubCh.assertQueue(controlQueue(id), QUEUE_OPTIONS);
 
 // 이미 끝난 주문은 되돌리지 않는다 (재전달·중복 이벤트 대비)
 async function applyEvent(e) {
@@ -80,6 +83,19 @@ app.post('/api/jobs', async (req, res) => {
     return res.status(503).json({ error: '지금은 주문을 받을 수 없습니다' });
   }
   res.status(201).json({ jobId, status: 'queued' });
+});
+
+// 워커를 직접 죽이지 않고, 워커가 읽는 명령 큐에 "쓰러져" 메시지를 보낸다
+app.post('/api/workers/:id/crash', async (req, res) => {
+  const workerId = req.params.id;
+  if (!WORKER_IDS.includes(workerId)) return res.status(404).json({ error: '없는 요리사입니다' });
+  try {
+    // 워커가 꺼져 있을 때 쌓인 명령이 나중에 실행되지 않도록 5초 뒤 만료
+    await publishConfirmed(pubCh, controlQueue(workerId), { command: 'crash' }, { persistent: false, expiration: '5000' });
+  } catch {
+    return res.status(503).json({ error: '지금은 명령을 보낼 수 없습니다' });
+  }
+  res.json({ workerId, recoverMs: WORKER_RECOVER_MS });
 });
 
 app.get('/api/jobs', async (req, res) => {
