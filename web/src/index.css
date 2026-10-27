@@ -94,3 +94,88 @@ tr.selected {
 .log ul {
   padding: 0;
 }
+
+.kitchen {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1fr;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.zone {
+  min-height: 190px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #f1e3c8;
+}
+
+.zone h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: #868e96;
+}
+
+.tickets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ticket {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #fff4e6;
+  border: 1px solid #ffd8a8;
+  font-size: 14px;
+}
+
+.ticket-completed {
+  background: #ebfbee;
+  border-color: #b2f2bb;
+}
+
+.ticket-failed {
+  background: #fff5f5;
+  border-color: #ffc9c9;
+}
+
+.chef-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+}
+
+.chef {
+  font-size: 28px;
+}
+
+.chef.cooking {
+  animation: bounce 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes bounce {
+  to {
+    transform: translateY(-6px);
+  }
+}
+
+.chef-name {
+  width: 52px;
+  font-size: 13px;
+}
+
+.idle {
+  color: #adb5bd;
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .kitchen {
+    grid-template-columns: 1fr;
+  }
+}

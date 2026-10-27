@@ -1,13 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-
-type Job = {
-  id: number
-  menu: string
-  status: 'queued' | 'started' | 'completed' | 'failed'
-  workerId: string | null
-  message: string | null
-  createdAt: string
-}
+import Kitchen from './Kitchen'
+import type { Job } from './types'
 
 type JobEvent = {
   event: string
@@ -99,6 +92,8 @@ export default function App() {
         </label>
       </div>
       {notice && <p className="notice">{notice}</p>}
+
+      <Kitchen jobs={jobs} />
 
       <table>
         <thead>
