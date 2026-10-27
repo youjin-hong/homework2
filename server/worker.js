@@ -13,7 +13,7 @@ let fallen = false;
 
 async function run() {
   const myEpoch = ++epoch;
-  // 쓰러진 뒤의 낡은 연결에서는 아무것도 하지 않는다
+  // 장애가 난 뒤의 낡은 연결에서는 아무것도 하지 않는다
   const alive = () => epoch === myEpoch;
 
   const conn = await amqp.connect(AMQP_URL);
@@ -42,24 +42,24 @@ async function run() {
       occurredAt: new Date().toISOString(),
     });
 
-  // 요리사는 한 번에 한 건만 조리한다 (prefetch를 꺼도 받아 둔 메시지는 줄을 선다)
+  // 워커는 한 번에 한 건만 처리한다 (prefetch를 꺼도 받아 둔 메시지는 줄을 선다)
   let kitchen = Promise.resolve();
 
   async function cook(msg) {
     if (!alive()) return;
     const job = JSON.parse(msg.content.toString());
-    console.log(`[${workerId}] job ${job.jobId} 시작 - ${job.menu} (redelivered: ${msg.fields.redelivered})`);
+    console.log(`[${workerId}] job ${job.jobId} 시작 - 작업 ${job.type} (redelivered: ${msg.fields.redelivered})`);
 
     try {
-      await emit(EVENTS.STARTED, job, 'started', '조리 중');
+      await emit(EVENTS.STARTED, job, 'started', '처리 중');
       await sleep(job.durationMs);
       if (!alive()) return;
 
       if (job.shouldFail) {
-        await emit(EVENTS.FAILED, job, 'failed', '품절 (재료 소진)');
+        await emit(EVENTS.FAILED, job, 'failed', '처리 실패');
         console.log(`[${workerId}] job ${job.jobId} 실패`);
       } else {
-        await emit(EVENTS.COMPLETED, job, 'completed', `조리 완료 (${(job.durationMs / 1000).toFixed(1)}초)`);
+        await emit(EVENTS.COMPLETED, job, 'completed', `처리 완료 (${(job.durationMs / 1000).toFixed(1)}초)`);
         console.log(`[${workerId}] job ${job.jobId} 완료`);
       }
       // 이벤트 전달이 확인된 뒤에만 Ack
@@ -76,12 +76,12 @@ async function run() {
     kitchen = kitchen.then(() => cook(msg));
   });
 
-  // 쓰러지기: Ack 없이 연결을 끊어 조리 중이던 작업이 다른 워커에게 재전달되게 한다
+  // 장애 내기: Ack 없이 연결을 끊어 처리 중이던 작업이 다른 워커에게 재전달되게 한다
   await ch.consume(controlQueue(workerId), (msg) => {
     ch.ack(msg);
     fallen = true;
     epoch++;
-    console.log(`[${workerId}] 쓰러짐 (${WORKER_RECOVER_MS / 1000}초 뒤 복귀)`);
+    console.log(`[${workerId}] 장애 발생 (${WORKER_RECOVER_MS / 1000}초 뒤 복귀)`);
     conn.close().catch(() => {});
     setTimeout(() => {
       fallen = false;

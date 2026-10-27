@@ -2,7 +2,7 @@ import amqp from 'amqplib';
 import express from 'express';
 import mysql from 'mysql2/promise';
 import {
-  AMQP_URL, QUEUES, QUEUE_OPTIONS, MENUS, WORKER_IDS, WORKER_RECOVER_MS, controlQueue, publishConfirmed,
+  AMQP_URL, QUEUES, QUEUE_OPTIONS, JOB_TYPES, WORKER_IDS, WORKER_RECOVER_MS, controlQueue, publishConfirmed,
 } from './shared.js';
 
 const pool = mysql.createPool({
@@ -25,7 +25,7 @@ await pubCh.assertQueue(QUEUES.JOBS, QUEUE_OPTIONS);
 await subCh.assertQueue(QUEUES.EVENTS, QUEUE_OPTIONS);
 for (const id of WORKER_IDS) await pubCh.assertQueue(controlQueue(id), QUEUE_OPTIONS);
 
-// 이미 끝난 주문은 되돌리지 않는다 (재전달·중복 이벤트 대비)
+// 이미 끝난 작업은 되돌리지 않는다 (재전달·중복 이벤트 대비)
 async function applyEvent(e) {
   await pool.execute(
     'INSERT INTO job_events (job_id, event, worker_id, message, created_at) VALUES (?, ?, ?, ?, NOW(3))',
@@ -43,7 +43,7 @@ await subCh.consume(QUEUES.EVENTS, async (msg) => {
   const e = JSON.parse(msg.content.toString());
   try {
     const changed = await applyEvent(e);
-    console.log(`[master] ${e.event} job ${e.jobId} ${e.workerId}${changed ? '' : ' (이미 끝난 주문, 상태 유지)'}`);
+    console.log(`[master] ${e.event} job ${e.jobId} ${e.workerId}${changed ? '' : ' (이미 끝난 작업, 상태 유지)'}`);
     subCh.ack(msg);
   } catch (err) {
     console.error('[master] 이벤트 처리 실패', err.message);
@@ -51,44 +51,44 @@ await subCh.consume(QUEUES.EVENTS, async (msg) => {
   }
 });
 
-const JOB_COLUMNS = `id, menu, status, worker_id AS workerId, result_message AS message, created_at AS createdAt`;
+const JOB_COLUMNS = `id, type, status, worker_id AS workerId, result_message AS message, created_at AS createdAt`;
 
 const app = express();
 app.use(express.json());
 
 app.post('/api/jobs', async (req, res) => {
-  const { menu, shouldFail = false } = req.body ?? {};
-  if (!(menu in MENUS)) return res.status(400).json({ error: '없는 메뉴입니다' });
-  const durationMs = MENUS[menu];
+  const { type, shouldFail = false } = req.body ?? {};
+  if (!(type in JOB_TYPES)) return res.status(400).json({ error: '없는 작업 종류입니다' });
+  const durationMs = JOB_TYPES[type];
 
   // 저장이 먼저, 발행이 나중
   const [ins] = await pool.execute(
-    `INSERT INTO jobs (menu, status, duration_ms, should_fail, created_at, updated_at)
+    `INSERT INTO jobs (type, status, duration_ms, should_fail, created_at, updated_at)
      VALUES (?, 'queued', ?, ?, NOW(3), NOW(3))`,
-    [menu, durationMs, shouldFail ? 1 : 0],
+    [type, durationMs, shouldFail ? 1 : 0],
   );
   const jobId = ins.insertId;
   await pool.execute(
-    `INSERT INTO job_events (job_id, event, message, created_at) VALUES (?, 'job.created', '주문 접수', NOW(3))`,
+    `INSERT INTO job_events (job_id, event, message, created_at) VALUES (?, 'job.created', '작업 접수', NOW(3))`,
     [jobId],
   );
 
   try {
-    await publishConfirmed(pubCh, QUEUES.JOBS, { jobId, menu, durationMs, shouldFail: Boolean(shouldFail) });
+    await publishConfirmed(pubCh, QUEUES.JOBS, { jobId, type, durationMs, shouldFail: Boolean(shouldFail) });
   } catch (err) {
     await pool.execute(
-      `UPDATE jobs SET status = 'failed', result_message = '주문 접수 실패', updated_at = NOW(3) WHERE id = ?`,
+      `UPDATE jobs SET status = 'failed', result_message = '작업 접수 실패', updated_at = NOW(3) WHERE id = ?`,
       [jobId],
     );
-    return res.status(503).json({ error: '지금은 주문을 받을 수 없습니다' });
+    return res.status(503).json({ error: '지금은 작업을 받을 수 없습니다' });
   }
   res.status(201).json({ jobId, status: 'queued' });
 });
 
-// 워커를 직접 죽이지 않고, 워커가 읽는 명령 큐에 "쓰러져" 메시지를 보낸다
+// 워커를 직접 죽이지 않고, 워커가 읽는 명령 큐에 "장애 내기" 메시지를 보낸다
 app.post('/api/workers/:id/crash', async (req, res) => {
   const workerId = req.params.id;
-  if (!WORKER_IDS.includes(workerId)) return res.status(404).json({ error: '없는 요리사입니다' });
+  if (!WORKER_IDS.includes(workerId)) return res.status(404).json({ error: '없는 워커입니다' });
   try {
     // 워커가 꺼져 있을 때 쌓인 명령이 나중에 실행되지 않도록 5초 뒤 만료
     await publishConfirmed(pubCh, controlQueue(workerId), { command: 'crash' }, { persistent: false, expiration: '5000' });
@@ -105,7 +105,7 @@ app.get('/api/jobs', async (req, res) => {
 
 app.get('/api/jobs/:id', async (req, res) => {
   const [jobs] = await pool.execute(`SELECT ${JOB_COLUMNS} FROM jobs WHERE id = ?`, [req.params.id]);
-  if (jobs.length === 0) return res.status(404).json({ error: '없는 주문입니다' });
+  if (jobs.length === 0) return res.status(404).json({ error: '없는 작업입니다' });
   const [events] = await pool.execute(
     'SELECT event, worker_id AS workerId, message, created_at AS createdAt FROM job_events WHERE job_id = ? ORDER BY id',
     [req.params.id],

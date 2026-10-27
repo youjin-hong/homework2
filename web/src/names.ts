@@ -1,13 +1,18 @@
-// 화면에서만 쓰는 이름표 (코드와 WORKER_ID는 worker-1~3 그대로)
-export const MANAGER = { name: '은지원', role: '홀 매니저', face: '🧑‍💼' }
-
-export const CHEFS = [
-  { workerId: 'worker-1', name: '강호동', face: '🧑‍🍳' },
-  { workerId: 'worker-2', name: '이수근', face: '🧑‍🍳' },
-  { workerId: 'worker-3', name: '안재현', face: '🧑‍🍳' },
+// 화면에서만 쓰는 이름 (코드와 WORKER_ID는 worker-1~3 그대로)
+export const WORKERS = [
+  { workerId: 'worker-1', name: 'Worker 1' },
+  { workerId: 'worker-2', name: 'Worker 2' },
+  { workerId: 'worker-3', name: 'Worker 3' },
 ]
 
-export function chefName(workerId: string | null) {
+// 서버의 JOB_TYPES와 같은 처리 시간 (버튼 표시용)
+export const JOB_TYPES = [
+  { type: 'A', seconds: 6 },
+  { type: 'B', seconds: 10 },
+  { type: 'C', seconds: 15 },
+]
+
+export function workerName(workerId: string | null) {
   if (!workerId) return null
-  return CHEFS.find((chef) => chef.workerId === workerId)?.name ?? workerId
+  return WORKERS.find((worker) => worker.workerId === workerId)?.name ?? workerId
 }

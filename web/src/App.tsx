@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
-import Kitchen from './Kitchen'
-import { chefName } from './names'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useFlights } from './flights'
+import { JOB_TYPES, workerName } from './names'
+import Pipeline from './Pipeline'
 import type { Job } from './types'
 
 type JobEvent = {
@@ -10,7 +11,6 @@ type JobEvent = {
   createdAt: string
 }
 
-const MENUS = ['라면', '돈까스', '김치볶음밥']
 const isDone = (job: Job) => job.status === 'completed' || job.status === 'failed'
 const timeOf = (createdAt: string) => createdAt.slice(11, 19)
 
@@ -20,7 +20,8 @@ export default function App() {
   const [notice, setNotice] = useState('')
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [events, setEvents] = useState<JobEvent[]>([])
-  const [receivingId, setReceivingId] = useState<number | null>(null)
+  const { flights, run } = useFlights()
+  const prevStatus = useRef<Record<number, string>>({})
   const [fallen, setFallen] = useState<Record<string, boolean>>({})
 
   const loadJobs = useCallback(async () => {
@@ -29,7 +30,7 @@ export default function App() {
       if (!res.ok) throw new Error()
       setJobs(await res.json())
     } catch {
-      setNotice('주문 목록을 불러오지 못했습니다')
+      setNotice('작업 목록을 불러오지 못했습니다')
     }
   }, [])
 
@@ -37,13 +38,26 @@ export default function App() {
     loadJobs()
   }, [loadJobs])
 
-  // 끝나지 않은 주문이 있을 때만 1초마다 조회
+  // 끝나지 않은 작업이 있을 때만 1초마다 조회
   const hasPending = jobs.some((job) => !isDone(job))
   useEffect(() => {
     if (!hasPending) return
     const timer = setInterval(loadJobs, 1000)
     return () => clearInterval(timer)
   }, [hasPending, loadJobs])
+
+  // 끝난 작업을 프론트가 처음 알게 되면 결과가 돌아오는 경로를 연출한다
+  useEffect(() => {
+    const prev = prevStatus.current
+    for (const job of jobs) {
+      const before = prev[job.id]
+      const isDoneNow = job.status === 'completed' || job.status === 'failed'
+      if (before && before !== 'completed' && before !== 'failed' && isDoneNow) {
+        run(job.id, ['events', 'master-out', 'db'])
+      }
+      prev[job.id] = job.status
+    }
+  }, [jobs, run])
 
   useEffect(() => {
     if (selectedId === null) return
@@ -53,29 +67,28 @@ export default function App() {
       .catch(() => setEvents([]))
   }, [selectedId, jobs])
 
-  async function order(menu: string) {
+  async function order(type: string) {
     setNotice('')
     try {
       const res = await fetch('/api/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ menu, shouldFail }),
+        body: JSON.stringify({ type, shouldFail }),
       })
       if (!res.ok) {
         setNotice(
           res.status === 502 || res.status === 503
-            ? '지금은 주문을 받을 수 없습니다'
-            : '주문에 실패했습니다',
+            ? '지금은 작업을 받을 수 없습니다'
+            : '작업 요청에 실패했습니다',
         )
         return
       }
       const { jobId } = await res.json()
-      setReceivingId(jobId)
+      // 프론트 → nginx → Master 구간은 순식간이라 화면에서 보이도록 연출한다
+      run(jobId, ['front', 'nginx', 'master-in'])
       await loadJobs()
-      // 홀 매니저가 접수하는 장면을 잠깐 보여 준 뒤 꽂이로 보낸다
-      setTimeout(() => setReceivingId((current) => (current === jobId ? null : current)), 2500)
     } catch {
-      setNotice('지금은 주문을 받을 수 없습니다')
+      setNotice('지금은 작업을 받을 수 없습니다')
     }
   }
 
@@ -88,26 +101,25 @@ export default function App() {
       setFallen((prev) => ({ ...prev, [workerId]: true }))
       setTimeout(() => setFallen((prev) => ({ ...prev, [workerId]: false })), recoverMs)
     } catch {
-      setNotice('요리사를 쓰러뜨리지 못했습니다')
+      setNotice('Worker에 장애를 내지 못했습니다')
     }
   }
 
   return (
     <main>
-      <h1>강식당 주문 현황</h1>
-
+      <h1>이벤트 드리븐 작업 처리</h1>
       {notice && <p className="notice">{notice}</p>}
 
-      <Kitchen
+      <Pipeline
         jobs={jobs}
-        receivingId={receivingId}
+        flights={flights}
         fallen={fallen}
         onCrash={crash}
         orderPanel={
           <div className="orders">
-            {MENUS.map((menu) => (
-              <button key={menu} onClick={() => order(menu)}>
-                {menu} 주문
+            {JOB_TYPES.map(({ type, seconds }) => (
+              <button key={type} onClick={() => order(type)}>
+                작업 {type} 요청 ({seconds}초)
               </button>
             ))}
             <label>
@@ -116,7 +128,7 @@ export default function App() {
                 checked={shouldFail}
                 onChange={(e) => setShouldFail(e.target.checked)}
               />{' '}
-              재료 소진(실패시키기)
+              실패시키기
             </label>
           </div>
         }
@@ -125,12 +137,12 @@ export default function App() {
       <table>
         <thead>
           <tr>
-            <th>주문번호</th>
-            <th>메뉴</th>
+            <th>번호</th>
+            <th>종류</th>
             <th>상태</th>
-            <th>요리사</th>
+            <th>Worker</th>
             <th>메시지</th>
-            <th>주문 시각</th>
+            <th>요청 시각</th>
           </tr>
         </thead>
         <tbody>
@@ -141,9 +153,9 @@ export default function App() {
               onClick={() => setSelectedId(job.id)}
             >
               <td>{job.id}</td>
-              <td>{job.menu}</td>
+              <td>{job.type}</td>
               <td className={`status-${job.status}`}>{job.status}</td>
-              <td>{chefName(job.workerId) ?? '-'}</td>
+              <td>{workerName(job.workerId) ?? '-'}</td>
               <td>{job.message ?? '-'}</td>
               <td>{timeOf(job.createdAt)}</td>
             </tr>
@@ -153,11 +165,11 @@ export default function App() {
 
       {selectedId !== null && (
         <section className="log">
-          <h2>{selectedId}번 주문 로그</h2>
+          <h2>{selectedId}번 작업 로그</h2>
           <ul>
             {events.map((e, i) => (
               <li key={i}>
-                {timeOf(e.createdAt)} {e.event} {chefName(e.workerId) ?? ''}
+                {timeOf(e.createdAt)} {e.event} {workerName(e.workerId) ?? ''}
               </li>
             ))}
           </ul>

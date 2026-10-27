@@ -1,12 +1,12 @@
 body {
   margin: 0;
   font-family: -apple-system, 'Apple SD Gothic Neo', sans-serif;
-  background: #fffaf0;
+  background: #f8f9fa;
   color: #333;
 }
 
 main {
-  max-width: 860px;
+  max-width: 1080px;
   margin: 0 auto;
   padding: 24px 16px;
 }
@@ -15,157 +15,184 @@ h1 {
   margin: 0 0 16px;
 }
 
+.notice {
+  margin: 0 0 12px;
+  color: #c92a2a;
+}
+
 .orders {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
 }
 
 .orders button {
-  padding: 10px 16px;
-  font-size: 15px;
+  padding: 7px 8px;
+  font-size: 13px;
   border: 0;
   border-radius: 8px;
-  background: #e8590c;
+  background: #1c7ed6;
   color: #fff;
   cursor: pointer;
 }
 
 .orders button:hover {
-  background: #d9480f;
+  background: #1971c2;
 }
 
-.notice {
-  margin: 12px 0 0;
-  color: #c92a2a;
+.orders label {
+  font-size: 13px;
 }
 
-table {
-  width: 100%;
-  margin-top: 20px;
-  border-collapse: collapse;
-  background: #fff;
-}
-
-th,
-td {
-  padding: 8px 10px;
-  border-bottom: 1px solid #eee;
-  text-align: left;
-}
-
-tbody tr {
-  cursor: pointer;
-}
-
-tbody tr:hover,
-tr.selected {
-  background: #fff4e6;
-}
-
-.status-queued {
-  color: #868e96;
-}
-
-.status-started {
-  color: #e8590c;
-  font-weight: 600;
-}
-
-.status-completed {
-  color: #2f9e44;
-}
-
-.status-failed {
-  color: #c92a2a;
-}
-
-.log {
-  margin-top: 20px;
-}
-
-.log li {
-  font-family: ui-monospace, monospace;
-  font-size: 14px;
-  list-style: none;
-}
-
-.log ul {
-  padding: 0;
-}
-
-.kitchen {
+.pipeline {
   display: grid;
-  grid-template-columns: 1fr 1.4fr 1fr;
-  gap: 12px;
+  grid-template-columns: 1.4fr 0.8fr 1.1fr 1fr 1.5fr;
+  grid-template-areas:
+    'front  nginx master jobs   workers'
+    'result db    master events workers';
+  gap: 26px 24px;
   margin-top: 20px;
 }
 
-.zone {
-  min-height: 190px;
+.node {
+  position: relative;
+  min-height: 96px;
   padding: 10px 12px;
   border-radius: 10px;
   background: #fff;
-  border: 1px solid #f1e3c8;
+  border: 1px solid #dee2e6;
 }
 
-.zone h3 {
+.node h3 {
   margin: 0 0 8px;
   font-size: 14px;
+}
+
+.node h3 small {
+  font-weight: 400;
+  font-size: 12px;
   color: #868e96;
 }
 
-.tickets {
+.node-icon {
+  font-size: 16px;
+}
+
+/* 요청 방향(위) → , 결과 방향(아래) ← */
+.node-front::after,
+.node-nginx::after,
+.node-master::after,
+.node-jobs::after,
+.node-result::after,
+.node-db::after,
+.node-events::after,
+.node-master::before {
+  position: absolute;
+  right: -19px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #868e96;
+  font-size: 16px;
+}
+
+.node-front::after,
+.node-nginx::after,
+.node-jobs::after {
+  content: '→';
+}
+
+.node-master::after {
+  content: '→';
+  top: 25%;
+}
+
+.node-master::before {
+  content: '←';
+  top: 75%;
+}
+
+.node-result::after,
+.node-db::after,
+.node-events::after {
+  content: '←';
+}
+
+.slot-label {
+  margin: 0 0 6px;
+  font-size: 11px;
+  color: #868e96;
+}
+
+.slot-label.bottom {
+  margin-top: 38px;
+}
+
+.tokens {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  min-height: 28px;
 }
 
-.ticket {
+.token {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
+  gap: 3px;
+  padding: 3px 8px;
   border-radius: 6px;
-  background: #fff4e6;
-  border: 1px solid #ffd8a8;
-  font-size: 14px;
+  font-size: 13px;
+  border: 1px solid #ced4da;
+  background: #f1f3f5;
 }
 
-.ticket-completed {
+.token-moving {
+  background: #fff9db;
+  border-color: #ffe066;
+}
+
+.token-completed {
   background: #ebfbee;
   border-color: #b2f2bb;
 }
 
-.ticket-failed {
+.token-failed {
   background: #fff5f5;
   border-color: #ffc9c9;
 }
 
-.chef-row {
+.worker-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 48px;
+  min-height: 44px;
 }
 
-.chef {
-  font-size: 28px;
+.worker-icon {
+  font-size: 22px;
 }
 
-.chef.cooking {
+.worker-icon.working {
   animation: bounce 0.5s ease-in-out infinite alternate;
 }
 
 @keyframes bounce {
   to {
-    transform: translateY(-6px);
+    transform: translateY(-5px);
   }
 }
 
-.chef-name {
-  width: 52px;
+.worker-name {
+  width: 56px;
+  font-size: 13px;
+}
+
+.worker-slot {
+  min-width: 70px;
+}
+
+.idle {
+  color: #adb5bd;
   font-size: 13px;
 }
 
@@ -184,64 +211,12 @@ tr.selected {
   cursor: default;
 }
 
-.idle {
-  color: #adb5bd;
-  font-size: 13px;
-}
-
-@media (max-width: 640px) {
-  .kitchen,
-  .front {
-    grid-template-columns: 1fr;
-  }
-}
-
-.front {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 12px;
-  margin-top: 20px;
-}
-
-.front .zone {
-  min-height: 0;
-}
-
-.manager {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 48px;
-}
-
-.manager-face {
-  font-size: 28px;
-}
-
-.manager-name {
-  width: 52px;
-  font-size: 13px;
-}
-
-.receive {
-  margin-left: 6px;
-  font-size: 13px;
-  color: #e8590c;
-}
-
-.zone h3 small {
-  margin-left: 4px;
-  font-weight: 400;
-  font-size: 12px;
-  color: #adb5bd;
-}
-
 .legend {
-  margin-top: 12px;
+  margin-top: 16px;
   padding: 10px 12px;
   border-radius: 10px;
   background: #fff;
-  border: 1px solid #f1e3c8;
+  border: 1px solid #dee2e6;
 }
 
 .legend h3 {
@@ -269,4 +244,76 @@ tr.selected {
 
 .legend dd {
   margin: 0;
+}
+
+.legend-note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: #868e96;
+}
+
+table {
+  width: 100%;
+  margin-top: 20px;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+th,
+td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+}
+
+tbody tr {
+  cursor: pointer;
+}
+
+tbody tr:hover,
+tr.selected {
+  background: #e7f5ff;
+}
+
+.status-queued {
+  color: #868e96;
+}
+
+.status-started {
+  color: #e8590c;
+  font-weight: 600;
+}
+
+.status-completed {
+  color: #2f9e44;
+}
+
+.status-failed {
+  color: #c92a2a;
+}
+
+.log {
+  margin-top: 20px;
+}
+
+.log ul {
+  padding: 0;
+}
+
+.log li {
+  font-family: ui-monospace, monospace;
+  font-size: 14px;
+  list-style: none;
+}
+
+@media (max-width: 760px) {
+  .pipeline {
+    grid-template-columns: 1fr;
+    grid-template-areas: 'front' 'nginx' 'master' 'jobs' 'workers' 'events' 'db' 'result';
+  }
+
+  .node::after,
+  .node::before {
+    display: none;
+  }
 }
