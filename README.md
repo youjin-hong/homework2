@@ -31,6 +31,14 @@ Docker 없이 맥북에서 Master 1개와 Worker 3개를 독립 프로세스로 
 | 수동 Ack | Worker가 결과 이벤트 전달을 확인한 뒤에만 보내는 처리 완료 신호 |
 | `prefetch=1` | Worker는 한 번에 작업 하나만 가져간다 |
 
+### 용어 정리
+
+- **메시지와 이벤트:** 메시지는 큐를 오가는 데이터 봉투 전체이고, 이벤트는 그중 "어떤 일이 일어났다"는 사실을 알리는 것이다. `jobs` 큐의 메시지는 Master가 Worker에게 보내는 **요청**("이 작업을 처리해 줘")이고, `job.events` 큐의 메시지(`job.started`, `job.completed`, `job.failed`)가 Worker가 보내는 **이벤트**("처리가 끝났다")다. 이벤트는 과거형으로 이름 짓고, 어떻게 반응할지는 받는 쪽이 정한다. `job.created`는 Master가 자기가 만든 작업이라 큐로 보내지 않고 DB에만 기록한다.
+- **Producer와 Consumer:** 프로그램 이름이 아니라 큐를 기준으로 한 역할이다. Master와 Worker는 둘 다 Producer이면서 Consumer다.
+- **수동 Ack와 재전달:** Worker가 메시지를 받아도 RabbitMQ는 지우지 않고 "전달됨, 확인 전(Unacked)"으로만 표시한다. Ack를 받아야 지운다. Worker가 Ack 전에 죽으면 RabbitMQ가 연결이 끊긴 것을 알고(프로세스가 죽으면 운영체제가 TCP 연결을 대신 닫는다) 그 메시지를 `jobs` 큐로 되돌리며 `redelivered: true`가 붙는다. 네트워크가 끊기거나 기계가 멈춘 경우는 하트비트로 알아채는데, 한 대에서 하는 이번 실습에는 해당하지 않는다.
+- **`prefetch`:** Ack 없이 Worker가 한 번에 쥐고 있을 수 있는 메시지 수다. 1이면 처리 중인 것 하나만, 2이면 미리 받아 둔 것 하나를 더 쥔다. 올릴수록 짧은 작업의 처리량은 늘지만, 미리 받은 작업이 그 Worker 안에서 기다려 다른 Worker가 놀아도 가져가지 못한다. 처리 시간이 긴 이번 작업에는 공평하게 나뉘는 `1`이 맞다.
+- **`durable`과 `persistent`:** durable은 **큐**를 디스크에 기록해 재시작 후에도 남기고(`assertQueue`의 `durable: true`), persistent는 **메시지**를 디스크에 기록한다(`sendToQueue`의 `persistent: true`). 둘을 같이 해야 RabbitMQ를 재시작해도 큐와 메시지가 남는다(테스트 H). 디스크는 맥북 내장 SSD이고 DB와는 다르다. RabbitMQ는 Ack하면 메시지를 지우고, MySQL은 작업 기록을 계속 보관한다.
+
 작업 종류는 코드에 고정했다. 작업 A 6초 · 작업 B 10초 · 작업 C 15초(`server/shared.js`의 `JOB_TYPES`). 처리 시간은 `setTimeout`으로 흉내 낸 것이다. (처음에는 3초·5초·10초였고, 화면에서 흐름이 보이도록 늘렸다. 아래 테스트 결과는 처음 시간으로 측정했다.)
 
 화면은 위 경로를 그대로 펼친 **파이프라인**(`web/src/Pipeline.tsx`)이다. 작업 하나가 토큰이 되어 지나가는 자리가 강조되고 Motion의 `layoutId`로 칸 사이를 이동한다.
